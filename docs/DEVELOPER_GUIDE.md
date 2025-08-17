@@ -5,22 +5,22 @@ A developer-focused reference for contributing to and maintaining SportsHub — 
 ### TL;DR (First Run)
 
 ```bash
-# Prereqs: Node.js 20, pnpm, Docker, Docker Compose
+# Prereqs: Node.js 20, npm, Docker, Docker Compose
 
-pnpm i
+npm install
 
 # Start local infra + apps (API, Web, DB, Redis)
 docker compose up -d
 
 # Generate DB client and run migrations
-pnpm -w prisma:generate
-pnpm -w prisma:migrate:dev
+npm run prisma:generate
+npm run prisma:migrate:dev
 
 # Seed baseline data (sports, teams)
-pnpm -w seed
+npm run seed
 
 # Start dev servers
-pnpm -w dev
+npm run dev
 ```
 
 ---
@@ -30,6 +30,7 @@ pnpm -w dev
 **Purpose**: Aggregate live sports data and allow user-hosted games in a single real-time UI.
 
 **Core features**:
+
 - **Multi-sport API adapters**: NBA, NHL, MLB, Soccer (extensible).
 - **Unified database schema** for all sports.
 - **Real-time updates** via Socket.IO.
@@ -39,6 +40,7 @@ pnpm -w dev
 - **Admin/monitoring endpoints** for health and metrics.
 
 **Tech stack**:
+
 - **Backend**: Node.js 20, Fastify, TypeScript
 - **Frontend**: React 18, Vite, TypeScript, Tailwind
 - **Database**: PostgreSQL (Prisma ORM)
@@ -53,42 +55,121 @@ pnpm -w dev
 
 ## 2) Repository Structure
 
-Monorepo layout using pnpm workspaces:
+Standard frontend/backend project structure:
 
 ```text
 SportsHub/
-  apps/
-    api/         # Fastify backend API
-    web/         # React frontend app
-  packages/
-    adapters/    # API integrations for each sport
-    types/       # Shared DTOs, Zod schemas
-    utils/       # Shared helpers (logging, constants)
-  scripts/       # DB seeds, maintenance scripts
-  docs/          # Developer documentation
+├── frontend/               # React application
+│   ├── public/            # Static assets
+│   ├── src/
+│   │   ├── components/    # Shared/reusable UI components
+│   │   │   ├── ui/        # Basic UI primitives (Button, Input, etc.)
+│   │   │   └── layouts/   # Layout components (Header, Sidebar, etc.)
+│   │   ├── features/      # Feature-based modules
+│   │   │   ├── auth/      # Authentication feature
+│   │   │   │   ├── api/   # API calls for auth
+│   │   │   │   ├── components/ # Auth-specific components
+│   │   │   │   ├── hooks/ # Auth-specific hooks
+│   │   │   │   ├── stores/ # Auth state management
+│   │   │   │   └── types/ # Auth type definitions
+│   │   │   ├── games/     # Games management feature
+│   │   │   └── dashboard/ # Dashboard feature
+│   │   ├── hooks/         # Shared custom hooks
+│   │   ├── stores/        # Global state management
+│   │   ├── lib/           # Third-party library configurations
+│   │   ├── utils/         # Utility functions
+│   │   ├── types/         # Global type definitions
+│   │   ├── App.tsx        # Root component
+│   │   └── main.tsx       # Application entry point
+│   ├── package.json
+│   └── vite.config.ts
+├── backend/                # Node.js/Fastify API server
+│   ├── src/
+│   │   ├── config/        # Configuration files
+│   │   ├── controllers/   # Route handlers
+│   │   ├── middleware/    # Custom middleware
+│   │   ├── models/        # Database models (Prisma)
+│   │   ├── routes/        # API route definitions
+│   │   ├── services/      # Business logic layer
+│   │   ├── adapters/      # External API integrations
+│   │   ├── utils/         # Utility functions
+│   │   ├── types/         # Type definitions
+│   │   ├── app.ts         # Express/Fastify app setup
+│   │   └── server.ts      # Server entry point
+│   ├── prisma/            # Database schema and migrations
+│   ├── tests/             # Backend tests
+│   └── package.json
+├── shared/                 # Shared utilities and types
+│   ├── types/             # Shared type definitions
+│   └── utils/             # Shared utility functions
+├── scripts/               # Build and deployment scripts
+├── docs/                  # Documentation
+└── package.json           # Root package.json for shared scripts
 ```
 
-- **apps/**: Deployable services (runnable, containerized). Each has its own `Dockerfile` and env config.
-- **packages/**: Shared libraries used across apps (published locally via pnpm workspaces).
-- **scripts/**: One-off or scheduled utilities (seeds, migrations, data backfills, maintenance).
+### Frontend Architecture
 
-Workspaces are declared in the root `package.json` to enable hoisting and shared dependency management.
+The frontend follows the **Bulletproof React** architecture pattern, which emphasizes:
+
+#### Feature-Based Organization
+Each feature is self-contained with its own:
+- **API Layer**: HTTP client functions for backend communication
+- **Components**: Feature-specific UI components
+- **Hooks**: Custom hooks for feature logic
+- **Stores**: State management (using Zustand or similar)
+- **Types**: TypeScript interfaces and types
+
+#### Component Organization
+- **`components/ui/`**: Reusable UI primitives (Button, Input, Modal, etc.)
+- **`components/layouts/`**: Layout components (Header, Sidebar, PageLayout, etc.)
+- **`features/*/components/`**: Feature-specific components
+
+#### Key Principles
+1. **Co-location**: Keep related files close together
+2. **Absolute Imports**: Use absolute imports from `src/`
+3. **Barrel Exports**: Use index files to create clean import paths
+4. **Feature Isolation**: Each feature should be independent
+5. **Shared Components**: Reusable components in `components/`
+
+#### Example Feature Structure
+```text
+src/features/games/
+├── api/
+│   ├── getGames.ts
+│   ├── createGame.ts
+│   └── index.ts
+├── components/
+│   ├── GameCard.tsx
+│   ├── GameList.tsx
+│   ├── CreateGameForm.tsx
+│   └── index.ts
+├── hooks/
+│   ├── useGames.ts
+│   ├── useCreateGame.ts
+│   └── index.ts
+├── stores/
+│   ├── gamesStore.ts
+│   └── index.ts
+├── types/
+│   └── index.ts
+└── index.ts
+```
 
 ---
 
-## 3) API Layer
+## 3) Backend API Layer
 
 ### 3.1 Adapter Interface
 
-Adapters live in `packages/adapters`. Each adapter is responsible for fetching and normalizing upstream JSON into the shared `GameCore` format.
+Adapters live in `backend/src/adapters/`. Each adapter is responsible for fetching and normalizing upstream JSON into the shared `GameCore` format.
 
 ```ts
-// packages/types/src/game.ts
+// shared/types/game.ts
 export type SportCode = 'nba' | 'nhl' | 'mlb' | 'soccer';
 
 export interface TeamRef {
-  id: string;        // stable ID we map to Team table
-  name: string;      // display name
+  id: string; // stable ID we map to Team table
+  name: string; // display name
   shortName?: string;
   abbreviation?: string; // e.g., LAL
 }
@@ -105,15 +186,15 @@ export interface GameScore {
 }
 
 export interface GameCore {
-  id: string;             // stable game ID across our system
+  id: string; // stable game ID across our system
   sport: SportCode;
-  league?: string;        // optional sub-league/competition (e.g., EPL)
+  league?: string; // optional sub-league/competition (e.g., EPL)
   homeTeam: TeamRef;
   awayTeam: TeamRef;
   status: GameStatus;
   score: GameScore;
-  updatedAt: string;      // ISO timestamp
-  startsAt?: string;      // scheduled start (ISO)
+  updatedAt: string; // ISO timestamp
+  startsAt?: string; // scheduled start (ISO)
   venue?: string;
   metadata?: Record<string, unknown>;
 }
@@ -364,8 +445,14 @@ import { betterAuth } from 'better-auth';
 export const auth = betterAuth({
   providers: {
     emailPassword: true,
-    github: { clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! },
-    google: { clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
   },
   session: {
     strategy: 'jwt-cookie',
@@ -427,10 +514,14 @@ export const queues = {
 };
 
 export function startWorkers(app: any) {
-  const worker = new Worker('poll:nba', async () => {
-    const games = await app.adapters.nba.fetchActiveGames();
-    // upsert → emit → cache
-  }, { connection: { url: process.env.REDIS_URL! } });
+  const worker = new Worker(
+    'poll:nba',
+    async () => {
+      const games = await app.adapters.nba.fetchActiveGames();
+      // upsert → emit → cache
+    },
+    { connection: { url: process.env.REDIS_URL! } },
+  );
 
   worker.on('failed', (job, err) => app.log.error({ jobId: job?.id, err }, 'poll failed'));
 }
@@ -474,7 +565,11 @@ pnpm -w test:e2e
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-export const options = { vus: 50, duration: '1m', thresholds: { http_req_duration: ['p(95)<200'] } };
+export const options = {
+  vus: 50,
+  duration: '1m',
+  thresholds: { http_req_duration: ['p(95)<200'] },
+};
 
 export default function () {
   const res = http.get(`${__ENV.API_URL}/games/live`);
@@ -501,19 +596,19 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: sportshub
-    ports: ["5432:5432"]
+    ports: ['5432:5432']
   redis:
     image: redis:7
-    ports: ["6379:6379"]
+    ports: ['6379:6379']
   api:
     build: ./apps/api
     env_file: ./apps/api/.env
-    ports: ["3001:3001"]
+    ports: ['3001:3001']
     depends_on: [db, redis]
   web:
     build: ./apps/web
     env_file: ./apps/web/.env
-    ports: ["3000:3000"]
+    ports: ['3000:3000']
     depends_on: [api]
 ```
 
@@ -603,14 +698,14 @@ jobs:
 
 ### 11.2 Adding a New Sport
 
-1) Create adapter in `packages/adapters/<sport>/index.ts` implementing `SportAdapter`.
-2) Export it from `packages/adapters/index.ts`.
-3) Register it in the API job scheduler and Socket rooms.
-4) Add sport record to `Sport` table (seed script under `scripts/seed`).
-5) Add teams mapping (seed or mapping table).
-6) Write unit tests for normalization.
-7) Verify `/games/live` and WS events locally.
-8) Open PR with tests and docs.
+1. Create adapter in `backend/src/adapters/<sport>/index.ts` implementing `SportAdapter`.
+2. Export it from `backend/src/adapters/index.ts`.
+3. Register it in the API job scheduler and Socket rooms.
+4. Add sport record to `Sport` table (seed script under `scripts/seed`).
+5. Add teams mapping (seed or mapping table).
+6. Write unit tests for normalization.
+7. Verify `/games/live` and WS events locally.
+8. Open PR with tests and docs.
 
 ---
 
@@ -619,38 +714,192 @@ jobs:
 ### Prerequisites
 
 - Node.js 20
-- pnpm 9+
+- npm 10+
 - Docker + Docker Compose
 
 ### Install & Run
 
 ```bash
-pnpm i
+npm install
 
 # bring up infra and apps
 docker compose up -d
 
 # generate prisma client and run migrations
-pnpm -w prisma:generate
-pnpm -w prisma:migrate:dev
+npm run prisma:generate
+npm run prisma:migrate:dev
 
 # seed data
-pnpm -w seed
+npm run seed
 
 # start dev servers (api at 3001, web at 3000)
-pnpm -w dev
+npm run dev
 ```
 
 ### Common Commands
 
 ```bash
-pnpm -w build
-pnpm -w lint
-pnpm -w typecheck
-pnpm -w test
-pnpm -w test:unit
-pnpm -w test:integration
-pnpm -w test:e2e
+npm run build
+npm run lint
+npm run typecheck
+npm run test
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+```
+
+### Development Workflow
+
+#### Frontend Development
+```bash
+cd frontend
+npm install
+npm run dev  # Start Vite dev server on port 3000
+```
+
+#### Backend Development
+```bash
+cd backend
+npm install
+npm run dev  # Start Fastify server on port 3001
+```
+
+#### Full Stack Development
+```bash
+# From project root
+npm run dev  # Starts both frontend and backend
+```
+
+### Implementing Bulletproof React Patterns
+
+#### 1. Creating a New Feature
+
+When adding a new feature, follow this structure:
+
+```bash
+# Create feature directory
+mkdir -p frontend/src/features/my-feature/{api,components,hooks,stores,types}
+
+# Create index files for barrel exports
+touch frontend/src/features/my-feature/{api,components,hooks,stores,types}/index.ts
+touch frontend/src/features/my-feature/index.ts
+```
+
+#### 2. API Layer Pattern
+
+```typescript
+// frontend/src/features/games/api/getGames.ts
+import { apiClient } from '@/lib/api-client';
+import { Game } from '../types';
+
+export const getGames = async (): Promise<Game[]> => {
+  const response = await apiClient.get('/games');
+  return response.data;
+};
+
+// frontend/src/features/games/api/index.ts
+export * from './getGames';
+export * from './createGame';
+export * from './updateGame';
+```
+
+#### 3. Custom Hooks Pattern
+
+```typescript
+// frontend/src/features/games/hooks/useGames.ts
+import { useQuery } from '@tanstack/react-query';
+import { getGames } from '../api';
+
+export const useGames = () => {
+  return useQuery({
+    queryKey: ['games'],
+    queryFn: getGames,
+  });
+};
+
+// frontend/src/features/games/hooks/index.ts
+export * from './useGames';
+export * from './useCreateGame';
+```
+
+#### 4. Component Organization
+
+```typescript
+// frontend/src/features/games/components/GameCard.tsx
+import { Game } from '../types';
+
+interface GameCardProps {
+  game: Game;
+  onSelect?: (game: Game) => void;
+}
+
+export const GameCard = ({ game, onSelect }: GameCardProps) => {
+  return (
+    <div className="game-card">
+      {/* Game card implementation */}
+    </div>
+  );
+};
+
+// frontend/src/features/games/components/index.ts
+export * from './GameCard';
+export * from './GameList';
+export * from './CreateGameForm';
+```
+
+#### 5. Store Pattern (using Zustand)
+
+```typescript
+// frontend/src/features/games/stores/gamesStore.ts
+import { create } from 'zustand';
+import { Game } from '../types';
+
+interface GamesState {
+  games: Game[];
+  selectedGame: Game | null;
+  setGames: (games: Game[]) => void;
+  setSelectedGame: (game: Game | null) => void;
+}
+
+export const useGamesStore = create<GamesState>((set) => ({
+  games: [],
+  selectedGame: null,
+  setGames: (games) => set({ games }),
+  setSelectedGame: (selectedGame) => set({ selectedGame }),
+}));
+```
+
+#### 6. Absolute Imports Configuration
+
+Ensure your `frontend/vite.config.ts` includes path aliases:
+
+```typescript
+// frontend/vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+And update `frontend/tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
 ```
 
 ---
@@ -751,4 +1000,3 @@ Body:
 ---
 
 If anything is unclear or you need help extending an area (new adapter, schema changes, or CI tweaks), open a PR with a draft and tag maintainers.
-
