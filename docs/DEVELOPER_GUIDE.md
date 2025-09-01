@@ -42,7 +42,7 @@ npm run dev
 **Tech stack**:
 
 - **Backend**: Node.js 20, Fastify, TypeScript
-- **Frontend**: React 18, Vite, TypeScript, Tailwind
+- **Frontend**: React 19, Vite, TypeScript, Tailwind CSS 3.0, shadcn/ui
 - **Database**: PostgreSQL (Prisma ORM)
 - **Cache & jobs**: Redis (BullMQ)
 - **Real-time**: Socket.IO
@@ -109,8 +109,6 @@ SportsHub/
 
 ### Frontend Architecture
 
-The frontend follows the **Bulletproof React** architecture pattern, which emphasizes:
-
 #### Feature-Based Organization
 Each feature is self-contained with its own:
 - **API Layer**: HTTP client functions for backend communication
@@ -120,9 +118,9 @@ Each feature is self-contained with its own:
 - **Types**: TypeScript interfaces and types
 
 #### Component Organization
-- **`components/ui/`**: Reusable UI primitives (Button, Input, Modal, etc.)
-- **`components/layouts/`**: Layout components (Header, Sidebar, PageLayout, etc.)
-- **`features/*/components/`**: Feature-specific components
+- **`components/ui/`**: shadcn/ui components (Button, Input, Card, Modal, etc.)
+- **`components/layouts/`**: Layout components built with Tailwind CSS
+- **`features/*/components/`**: Feature-specific components using shadcn/ui and Tailwind
 
 #### Key Principles
 1. **Co-location**: Keep related files close together
@@ -603,7 +601,7 @@ services:
   api:
     build: ./apps/api
     env_file: ./apps/api/.env
-    ports: ['3001:3001']
+    ports: ['5000:5000']
     depends_on: [db, redis]
   web:
     build: ./apps/web
@@ -619,7 +617,7 @@ Provide `.env.example` per app.
 ```env
 # apps/api/.env.example
 NODE_ENV=development
-PORT=3001
+PORT=5000
 
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sportshub
 REDIS_URL=redis://localhost:6379
@@ -732,7 +730,7 @@ npm run prisma:migrate:dev
 # seed data
 npm run seed
 
-# start dev servers (api at 3001, web at 3000)
+# start dev servers (api at 5000, web at 3000)
 npm run dev
 ```
 
@@ -757,11 +755,100 @@ npm install
 npm run dev  # Start Vite dev server on port 3000
 ```
 
+### Styling with Tailwind CSS and shadcn/ui
+
+The project uses **Tailwind CSS 3.0** and **shadcn/ui** for consistent, accessible, and maintainable styling.
+
+#### Initial Setup
+
+1. **Install Tailwind CSS and dependencies**:
+   ```bash
+   npm install tailwindcss@latest @tailwindcss/postcss postcss autoprefixer
+   ```
+
+2. **Configure PostCSS** (`postcss.config.js`):
+   ```javascript
+   export default {
+     plugins: {
+       '@tailwindcss/postcss': {},
+       autoprefixer: {},
+     },
+   }
+   ```
+
+3. **Create Tailwind CSS file** (`src/styles/globals.css`):
+   ```css
+   @import "tailwindcss";
+   ```
+
+4. **Initialize shadcn/ui**:
+   ```bash
+   npx shadcn@latest init
+   ```
+
+   Configuration options:
+   - Style: **Default**
+   - Base color: **Slate**
+   - CSS variables: **Yes**
+
+5. **Install common shadcn/ui components**:
+   ```bash
+   npx shadcn@latest add button card input label badge alert
+   ```
+
+#### Using shadcn/ui Components
+
+```typescript
+// Example component using shadcn/ui
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+export const GameCard = ({ game }) => {
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          {game.homeTeam.name} vs {game.awayTeam.name}
+          <Badge variant={game.status === 'live' ? 'default' : 'secondary'}>
+            {game.status}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-2xl font-bold">{game.score.home}</span>
+          <span className="text-muted-foreground">-</span>
+          <span className="text-2xl font-bold">{game.score.away}</span>
+        </div>
+        <Button className="w-full">View Details</Button>
+      </CardContent>
+    </Card>
+  );
+};
+```
+
+#### Tailwind Configuration
+
+The `tailwind.config.js` includes:
+- Custom color palette aligned with design system
+- Extended spacing and typography scales
+- Dark mode support
+- Component-specific utilities
+
+#### Best Practices
+
+1. **Use shadcn/ui components** for consistency and accessibility
+2. **Compose with Tailwind utilities** for custom styling
+3. **Follow design tokens** defined in CSS variables
+4. **Implement responsive design** with Tailwind breakpoints
+5. **Use semantic color classes** (e.g., `text-primary`, `bg-accent`)
+
 #### Backend Development
 ```bash
 cd backend
 npm install
-npm run dev  # Start Fastify server on port 3001
+npm run dev  # Start Fastify server on port 5000
 ```
 
 #### Full Stack Development
