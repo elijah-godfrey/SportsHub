@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GameStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINAL
+  CANCELLED
+  DELAYED
+}
+
+enum GameOrigin {
+  API
+  USER
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  name     String
+
+  hostedGames Game[] @relation("HostedBy")
+
+  metas UserGameMeta[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Sport {
+  id   String @id @default(uuid())
+  key  String @unique
+  name String @unique
+
+  teams Team[]
+  games Game[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sports")
+}
+
+model Team {
+  id      String @id @default(uuid())
+  sportId String
+  sport   Sport  @relation(fields: [sportId], references: [id])
+
+  name       String
+  shortName  String?
+  externalId String?
+
+  homeGames Game[] @relation("HomeTeam")
+  awayGames Game[] @relation("AwayTeam")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sportId, name])
+  @@unique([sportId, externalId])
+  @@map("teams")
+}
+
+model Game {
+  id      String @id @default(uuid())
+  sportId String
+  sport   Sport  @relation(fields: [sportId], references: [id])
+
+  homeTeamId String
+  homeTeam   Team   @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+
+  awayTeamId String
+  awayTeam   Team   @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+
+  startTime DateTime
+
+  status GameStatus @default(SCHEDULED)
+  period Int?
+  clock  String?
+  venue  String?
+
+  origin     GameOrigin @default(API)
+  adapter    String?
+  externalId String?
+
+  hostedById String?
+  hostedBy   User?   @relation("HostedBy", fields: [hostedById], references: [id])
+
+  visibility Visibility @default(PUBLIC)
+
+  score GameScore?
+
+  UserGameMeta UserGameMeta[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sportId, externalId])
+  @@index([sportId, status, startTime])
+  @@index([status, startTime])
+  @@map("games")
+}
+
+model GameScore {
+  id     String @id @default(uuid())
+  gameId String
+  game   Game?  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  homeScore Int @default(0)
+  awayScore Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([gameId])
+  @@map("game_scores")
+}
+
+model UserGameMeta {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  favourite Boolean @default(false)
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, gameId])
+  @@map("user_game_meta")
+}
