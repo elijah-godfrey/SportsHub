@@ -67,10 +67,11 @@ export default fastifyPlugin(async function authPlugin(fastify: FastifyInstance)
         const user = await fastify.optionalAuth(request);
 
         if (!user) {
-            return reply.status(401).send({
+            reply.status(401).send({
                 error: 'Unauthorized',
                 message: 'Authentication required'
             });
+            throw new Error('Authentication required');
         }
     });
 
