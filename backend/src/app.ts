@@ -1,25 +1,50 @@
-import fastify from 'fastify';
+import fastify, { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 import { healthRoutes } from './routes/health.js';
 import authPlugin from './middleware/auth.js';
 
-export const app = fastify({
-  logger: true,
-});
+export type AppConfig = {
+  enableCors?: boolean;
+  corsOrigins?: string[];
+  logger?: boolean | Record<string, unknown>;
+};
 
-// Register CORS
-app.register(import('@fastify/cors'), {
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
-  credentials: true
-});
+export function buildApp(config: AppConfig = {}): FastifyInstance {
+  const app = fastify({ logger: config.logger ?? true });
 
-// Register auth middleware
-app.register(authPlugin);
+  if (config.enableCors) {
+    app.register(cors, {
+      origin: config.corsOrigins ?? ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      credentials: true,
+    });
+  }
 
-// Register routes
-app.register(healthRoutes, { prefix: '/api' });
+  // Auth
+  app.register(authPlugin);
 
-// Root route
-app.get('/', async () => {
-  return { message: 'SportsHub API is running! 🏈⚽🏀' };
-});
+  // Routes
+  app.register(healthRoutes, { prefix: '/api' });
+
+  // Root
+  app.get('/', async () => ({ message: 'SportsHub API is running! 🏈⚽🏀' }));
+
+  // Not found
+  app.setNotFoundHandler((req, reply) => {
+    reply.code(404).send({ error: 'Not Found', path: req.url });
+  });
+
+  // Error handler
+  app.setErrorHandler((err, req, reply) => {
+    req.log.error(err);
+    const status = err.statusCode ?? 500;
+    reply.code(status).send({
+      error: status === 500 ? 'Internal Server Error' : err.name,
+      message: err.message,
+    });
+  });
+
+  return app;
+}
+
+export type App = ReturnType<typeof buildApp>;
 
