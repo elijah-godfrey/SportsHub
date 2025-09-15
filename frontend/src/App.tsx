@@ -1,4 +1,5 @@
 import { HealthCheck } from '@/features/health'
+import { AuthWrapper } from './components/auth/AuthWrapper'
 
 function App() {
   return (
@@ -9,13 +10,18 @@ function App() {
           <p className="text-lg text-muted-foreground mt-2">Live sports aggregation platform</p>
         </div>
       </header>
-      
+
       <main className="container mx-auto px-6 py-8">
+        <section className="mb-12">
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Authentication</h2>
+          <AuthWrapper />
+        </section>
+
         <section className="mb-12">
           <h2 className="text-2xl font-semibold text-foreground mb-6">System Status</h2>
           <HealthCheck />
         </section>
-        
+
         <section className="mb-12">
           <h2 className="text-2xl font-semibold text-foreground mb-6">Getting Started</h2>
           <div className="prose max-w-none">
@@ -29,7 +35,7 @@ function App() {
               </li>
               <li className="flex items-center">
                 <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                Backend: Node.js + Fastify + TypeScript
+                Backend: Node.js + Fastify + TypeScript + Better Auth
               </li>
               <li className="flex items-center">
                 <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
