@@ -25,22 +25,49 @@ export default fastifyPlugin(async function authPlugin(fastify: FastifyInstance)
                 if (value) headers.append(key, Array.isArray(value) ? value[0] : value);
             });
 
+            let body: string | undefined;
+            if (request.method !== 'GET' && request.method !== 'HEAD') {
+                if (request.headers['content-type']?.includes('application/json') && request.body) {
+                    body = JSON.stringify(request.body);
+                } else if (request.body) {
+                    body = request.body as string;
+                } else {
+                    body = undefined;
+                }
+            }
+
             const webRequest = new Request(url.toString(), {
                 method: request.method,
                 headers,
-                body: request.body ? JSON.stringify(request.body) : undefined,
+                body,
             });
 
             const response = await auth.handler(webRequest);
 
-            // Forward response
             reply.status(response.status);
             response.headers.forEach((value, key) => reply.header(key, value));
 
             const responseBody = await response.text();
-            return responseBody ? JSON.parse(responseBody) : null;
+            fastify.log.info(`Auth response body: ${responseBody || 'empty'}`);
+
+            if (responseBody) {
+                try {
+                    return JSON.parse(responseBody);
+                } catch {
+                    return responseBody;
+                }
+            }
+
+            // For redirects and empty responses, don't return anything
+            if (response.status >= 300 && response.status < 400) {
+                return reply.send();
+            }
+
+            return null;
         } catch (error) {
             fastify.log.error(error, 'Auth handler error:');
+            fastify.log.error(`Request URL: ${request.url}, Method: ${request.method}`);
+            fastify.log.error(`Headers: ${JSON.stringify(request.headers)}`);
             return reply.status(500).send({ error: 'Authentication error' });
         }
     });
