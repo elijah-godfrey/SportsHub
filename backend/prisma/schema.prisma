@@ -26,19 +26,67 @@ enum Visibility {
 }
 
 model User {
-  id       String @id @default(uuid())
-  email    String @unique
-  password String
-  name     String
+  id            String   @id @default(uuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  name          String
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  hostedGames Game[] @relation("HostedBy")
+  // Better Auth fields
+  accounts Account[]
+  sessions Session[]
 
-  metas UserGameMeta[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Your app fields
+  hostedGames Game[]         @relation("HostedBy")
+  metas       UserGameMeta[]
 
   @@map("users")
+}
+
+model Account {
+  id                String    @id @default(uuid())
+  userId            String
+  type              String?
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        DateTime?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
 }
 
 model Sport {
