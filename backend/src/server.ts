@@ -1,4 +1,9 @@
 import { buildApp } from './app.js';
+import { PrismaClient } from '@prisma/client';
+import { SportsService } from './services/SportsService.js';
+
+const prisma = new PrismaClient();
+const sportsService = new SportsService(prisma);
 
 const PORT = Number(process.env.PORT ?? 5000);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -17,6 +22,9 @@ const start = async () => {
   try {
     await app.listen({ port: PORT, host: HOST });
     app.log.info(`🚀 Server listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+    
+    // Initialize sports and polling jobs
+    await sportsService.initializeSports();
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -28,7 +36,9 @@ start();
 const shutdown = async (signal: string) => {
   try {
     app.log.info({ signal }, 'Received shutdown signal');
+    await sportsService.shutdown(); // close jobs
     await app.close(); // closes plugins & server
+    await prisma.$disconnect(); // close database
     process.exit(0);
   } catch (err) {
     app.log.error(err, 'Error during shutdown');
