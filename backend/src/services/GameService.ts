@@ -85,11 +85,29 @@ export class GameService {
     }
 
     /**
-     * Get today's games for a sport
+     * Get next upcoming games for a sport (finds the next closest game day)
      */
     async getTodaysGames(sportId: string) {
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        // Find the next upcoming game
+        const nextGame = await this.prisma.game.findFirst({
+            where: {
+                sportId,
+                startTime: {
+                    gte: new Date(),
+                },
+            },
+            orderBy: {
+                startTime: 'asc',
+            },
+        });
+
+        if (!nextGame) {
+            return []; // No upcoming games
+        }
+
+        // Get all games on the same day as the next game
+        const gameDate = new Date(nextGame.startTime);
+        const startOfDay = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate());
         const endOfDay = new Date(startOfDay);
         endOfDay.setDate(endOfDay.getDate() + 1);
 

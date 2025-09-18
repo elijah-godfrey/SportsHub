@@ -16,17 +16,17 @@ export async function gameRoutes(fastify: FastifyInstance) {
     fastify.get('/games/soccer', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             const sportId = await sportsService.getSoccerSportId();
-            const [todaysGames, liveGames] = await Promise.all([
+            const [upcomingGames, liveGames] = await Promise.all([
                 gameService.getTodaysGames(sportId),
                 gameService.getLiveGames(sportId),
             ]);
 
             // Merge and deduplicate games
-            const allGames = [...todaysGames];
-            const todaysGameIds = new Set(todaysGames.map(g => g.id));
+            const allGames = [...upcomingGames];
+            const upcomingGameIds = new Set(upcomingGames.map(g => g.id));
 
             for (const liveGame of liveGames) {
-                if (!todaysGameIds.has(liveGame.id)) {
+                if (!upcomingGameIds.has(liveGame.id)) {
                     allGames.push(liveGame);
                 }
             }
@@ -36,9 +36,10 @@ export async function gameRoutes(fastify: FastifyInstance) {
                 data: allGames,
                 count: allGames.length,
                 breakdown: {
-                    today: todaysGames.length,
+                    upcoming: upcomingGames.length,
                     live: liveGames.length,
                 },
+                message: upcomingGames.length > 0 ? `Next ${upcomingGames.length} upcoming Premier League games` : 'No upcoming Premier League games found',
             };
         } catch (error) {
             request.log.error(error);
@@ -49,7 +50,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
         }
     });
 
-    // Get today's games for a sport
+    // Get next upcoming games for a sport (next closest game day)
     fastify.get('/games/today/:sportId', async (
         request: FastifyRequest<{ Params: GameParams }>,
         reply: FastifyReply
@@ -62,12 +63,13 @@ export async function gameRoutes(fastify: FastifyInstance) {
                 success: true,
                 data: games,
                 count: games.length,
+                message: games.length > 0 ? `Next ${games.length} upcoming games` : 'No upcoming games found',
             };
         } catch (error) {
             request.log.error(error);
             return reply.status(500).send({
                 success: false,
-                error: 'Failed to fetch today\'s games',
+                error: 'Failed to fetch upcoming games',
             });
         }
     });

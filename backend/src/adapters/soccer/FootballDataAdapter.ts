@@ -47,8 +47,9 @@ export class FootballDataAdapter extends SportAdapter {
         super();
         this.apiKey = process.env.FOOTBALL_DATA_API_KEY || '';
         if (!this.apiKey) {
-            console.warn('FOOTBALL_DATA_API_KEY not set. Adapter will return mock data.');
+            throw new Error('FOOTBALL_DATA_API_KEY is required. Get a free API key from: https://www.football-data.org/client/register');
         }
+        console.log('✅ Football-Data.org API key configured');
     }
 
     /**
@@ -120,10 +121,6 @@ export class FootballDataAdapter extends SportAdapter {
      * Make HTTP request to Football-Data.org API
      */
     private async makeRequest(url: string): Promise<AdapterResponse<FootballDataResponse>> {
-        if (!this.apiKey) {
-            // Return mock data for development
-            return this.getMockData();
-        }
 
         try {
             const response = await fetch(url, {
@@ -212,79 +209,4 @@ export class FootballDataAdapter extends SportAdapter {
         };
     }
 
-    /**
-     * Return mock data for development (when no API key)
-     */
-    private getMockData(): AdapterResponse<FootballDataResponse> {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        return {
-            success: true,
-            data: {
-                count: 2,
-                matches: [
-                    {
-                        id: 12345,
-                        utcDate: today.toISOString(),
-                        status: 'SCHEDULED',
-                        minute: null,
-                        score: {
-                            winner: null,
-                            duration: 'REGULAR',
-                            fullTime: { home: null, away: null },
-                            halfTime: { home: null, away: null },
-                        },
-                        homeTeam: {
-                            id: 57,
-                            name: 'Arsenal FC',
-                            shortName: 'Arsenal',
-                            tla: 'ARS',
-                            crest: '',
-                        },
-                        awayTeam: {
-                            id: 61,
-                            name: 'Chelsea FC',
-                            shortName: 'Chelsea',
-                            tla: 'CHE',
-                            crest: '',
-                        },
-                        venue: 'Emirates Stadium',
-                    },
-                    {
-                        id: 12346,
-                        utcDate: tomorrow.toISOString(),
-                        status: 'LIVE',
-                        minute: 67,
-                        score: {
-                            winner: null,
-                            duration: 'REGULAR',
-                            fullTime: { home: 2, away: 1 },
-                            halfTime: { home: 1, away: 0 },
-                        },
-                        homeTeam: {
-                            id: 65,
-                            name: 'Manchester City FC',
-                            shortName: 'Man City',
-                            tla: 'MCI',
-                            crest: '',
-                        },
-                        awayTeam: {
-                            id: 66,
-                            name: 'Manchester United FC',
-                            shortName: 'Man United',
-                            tla: 'MUN',
-                            crest: '',
-                        },
-                        venue: 'Etihad Stadium',
-                    },
-                ],
-            },
-            rateLimit: {
-                remaining: 9,
-                resetTime: Date.now() + 60000,
-            },
-        };
-    }
 }
