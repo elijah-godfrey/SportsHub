@@ -1,6 +1,7 @@
 import fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { healthRoutes } from './routes/health.js';
+import { gameRoutes } from './routes/games.js';
 import authPlugin from './middleware/auth.js';
 
 export type AppConfig = {
@@ -24,6 +25,7 @@ export function buildApp(config: AppConfig = {}): FastifyInstance {
 
   // Routes
   app.register(healthRoutes, { prefix: '/api' });
+  app.register(gameRoutes, { prefix: '/api' });
 
   // Root
   app.get('/', async () => ({ message: 'SportsHub API is running! 🏈⚽🏀' }));
