@@ -2,6 +2,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { redis } from '../config/redis.js';
 import { SportAdapter } from '../adapters/index.js';
 import { GameService } from '../services/GameService.js';
+import { socketService } from '../services/SocketService.js';
 import { PrismaClient } from '@prisma/client';
 
 interface JobData {
@@ -54,9 +55,28 @@ export class SoccerJobs {
             }
 
             if (response.success && response.data) {
-                // Process each game
+                // Process each game and emit real-time updates
                 for (const gameData of response.data) {
-                    await this.gameService.upsertGame(sportId, gameData);
+                    const game = await this.gameService.upsertGame(sportId, gameData);
+
+                    // Emit real-time update for live games
+                    if (gameData.status === 'IN_PROGRESS') {
+                        socketService.emitGameUpdate({
+                            type: 'game_update',
+                            gameId: game.id,
+                            sportId: game.sportId,
+                            data: {
+                                id: game.id,
+                                homeTeam: gameData.homeTeam.name,
+                                awayTeam: gameData.awayTeam.name,
+                                score: gameData.score,
+                                status: gameData.status,
+                                period: gameData.period,
+                                clock: gameData.clock,
+                                updatedAt: new Date().toISOString(),
+                            },
+                        });
+                    }
                 }
 
                 console.log(`Processed ${response.data.length} games for ${type} poll`);

@@ -1,8 +1,10 @@
 import fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import websocket from '@fastify/websocket';
 import { healthRoutes } from './routes/health.js';
 import { gameRoutes } from './routes/games.js';
 import authPlugin from './middleware/auth.js';
+import { socketService } from './services/SocketService.js';
 
 export type AppConfig = {
   enableCors?: boolean;
@@ -20,12 +22,20 @@ export function buildApp(config: AppConfig = {}): FastifyInstance {
     });
   }
 
+  // WebSocket support
+  app.register(websocket);
+
   // Auth
   app.register(authPlugin);
 
   // Routes
   app.register(healthRoutes, { prefix: '/api' });
   app.register(gameRoutes, { prefix: '/api' });
+
+  // Initialize Socket.IO after server is ready
+  app.addHook('onReady', async () => {
+    await socketService.initialize(app);
+  });
 
   // Root
   app.get('/', async () => ({ message: 'SportsHub API is running! 🏈⚽🏀' }));
