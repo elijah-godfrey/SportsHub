@@ -115,6 +115,7 @@ model Team {
   name       String
   shortName  String?
   externalId String?
+  logoUrl    String?
 
   homeGames Game[] @relation("HomeTeam")
   awayGames Game[] @relation("AwayTeam")

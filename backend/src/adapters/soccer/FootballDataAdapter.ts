@@ -57,8 +57,14 @@ export class FootballDataAdapter extends SportAdapter {
      */
     async fetchTodaysGames(): Promise<AdapterResponse<GameData[]>> {
         try {
-            const today = new Date().toISOString().split('T')[0];
-            const url = `${this.baseUrl}/competitions/${this.competitionId}/matches?dateFrom=${today}&dateTo=${today}`;
+            // Fetch upcoming games for the next 7 days to ensure we get data
+            const today = new Date();
+            const nextWeek = new Date();
+            nextWeek.setDate(today.getDate() + 7);
+
+            const dateFrom = today.toISOString().split('T')[0];
+            const dateTo = nextWeek.toISOString().split('T')[0];
+            const url = `${this.baseUrl}/competitions/${this.competitionId}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
 
             const response = await this.makeRequest(url);
 
@@ -190,11 +196,13 @@ export class FootballDataAdapter extends SportAdapter {
                 name: match.homeTeam.name,
                 shortName: match.homeTeam.shortName || match.homeTeam.tla,
                 externalId: match.homeTeam.id.toString(),
+                logoUrl: match.homeTeam.crest,
             },
             awayTeam: {
                 name: match.awayTeam.name,
                 shortName: match.awayTeam.shortName || match.awayTeam.tla,
                 externalId: match.awayTeam.id.toString(),
+                logoUrl: match.awayTeam.crest,
             },
             startTime: match.utcDate,
             status,

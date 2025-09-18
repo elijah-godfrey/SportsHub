@@ -18,12 +18,14 @@ export class GameService {
             update: {
                 name: teamData.name,
                 shortName: teamData.shortName,
+                logoUrl: teamData.logoUrl,
             },
             create: {
                 sportId,
                 name: teamData.name,
                 shortName: teamData.shortName,
                 externalId: teamData.externalId,
+                logoUrl: teamData.logoUrl,
             },
         });
     }

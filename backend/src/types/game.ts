@@ -19,6 +19,7 @@ export interface TeamData {
     name: string;
     shortName?: string;
     externalId: string;
+    logoUrl?: string;
 }
 
 export interface AdapterResponse<T = GameData[]> {

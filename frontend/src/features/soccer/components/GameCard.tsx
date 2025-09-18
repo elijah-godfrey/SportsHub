@@ -1,10 +1,38 @@
 import type { Game } from '@/types/game';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
 
 interface GameCardProps {
     game: Game;
 }
+
+interface TeamLogoProps {
+    team: { name: string; shortName?: string; logoUrl?: string };
+    className?: string;
+}
+
+const TeamLogo = ({ team, className = "w-8 h-8" }: TeamLogoProps) => {
+    const [imageError, setImageError] = useState(false);
+    const fallbackInitial = team.shortName?.[0] || team.name[0];
+
+    if (!team.logoUrl || imageError) {
+        return (
+            <div className={`${className} bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+                {fallbackInitial}
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={team.logoUrl}
+            alt={`${team.name} logo`}
+            className={`${className} object-contain rounded`}
+            onError={() => setImageError(true)}
+        />
+    );
+};
 
 export const GameCard = ({ game }: GameCardProps) => {
     const formatTime = (dateString: string) => {
@@ -60,9 +88,7 @@ export const GameCard = ({ game }: GameCardProps) => {
                     {/* Home Team */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                                {game.homeTeam.shortName?.[0] || game.homeTeam.name[0]}
-                            </div>
+                            <TeamLogo team={game.homeTeam} />
                             <span className="font-medium">{game.homeTeam.name}</span>
                         </div>
                         <div className="text-2xl font-bold">
@@ -73,9 +99,7 @@ export const GameCard = ({ game }: GameCardProps) => {
                     {/* Away Team */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                                {game.awayTeam.shortName?.[0] || game.awayTeam.name[0]}
-                            </div>
+                            <TeamLogo team={game.awayTeam} />
                             <span className="font-medium">{game.awayTeam.name}</span>
                         </div>
                         <div className="text-2xl font-bold">
