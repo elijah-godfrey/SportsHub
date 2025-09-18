@@ -22,7 +22,7 @@ const start = async () => {
   try {
     await app.listen({ port: PORT, host: HOST });
     app.log.info(`🚀 Server listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-    
+
     // Initialize sports and polling jobs
     await sportsService.initializeSports();
   } catch (err) {

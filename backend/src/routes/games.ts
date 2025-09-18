@@ -12,45 +12,45 @@ interface GameParams {
 }
 
 export async function gameRoutes(fastify: FastifyInstance) {
-  // Convenience route for soccer games (most common use case)
-  fastify.get('/games/soccer', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const sportId = await sportsService.getSoccerSportId();
-      const [todaysGames, liveGames] = await Promise.all([
-        gameService.getTodaysGames(sportId),
-        gameService.getLiveGames(sportId),
-      ]);
+    // Convenience route for soccer games (most common use case)
+    fastify.get('/games/soccer', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const sportId = await sportsService.getSoccerSportId();
+            const [todaysGames, liveGames] = await Promise.all([
+                gameService.getTodaysGames(sportId),
+                gameService.getLiveGames(sportId),
+            ]);
 
-      // Merge and deduplicate games
-      const allGames = [...todaysGames];
-      const todaysGameIds = new Set(todaysGames.map(g => g.id));
-      
-      for (const liveGame of liveGames) {
-        if (!todaysGameIds.has(liveGame.id)) {
-          allGames.push(liveGame);
+            // Merge and deduplicate games
+            const allGames = [...todaysGames];
+            const todaysGameIds = new Set(todaysGames.map(g => g.id));
+
+            for (const liveGame of liveGames) {
+                if (!todaysGameIds.has(liveGame.id)) {
+                    allGames.push(liveGame);
+                }
+            }
+
+            return {
+                success: true,
+                data: allGames,
+                count: allGames.length,
+                breakdown: {
+                    today: todaysGames.length,
+                    live: liveGames.length,
+                },
+            };
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({
+                success: false,
+                error: 'Failed to fetch soccer games',
+            });
         }
-      }
+    });
 
-      return {
-        success: true,
-        data: allGames,
-        count: allGames.length,
-        breakdown: {
-          today: todaysGames.length,
-          live: liveGames.length,
-        },
-      };
-    } catch (error) {
-      request.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        error: 'Failed to fetch soccer games',
-      });
-    }
-  });
-
-  // Get today's games for a sport
-  fastify.get('/games/today/:sportId', async (
+    // Get today's games for a sport
+    fastify.get('/games/today/:sportId', async (
         request: FastifyRequest<{ Params: GameParams }>,
         reply: FastifyReply
     ) => {
