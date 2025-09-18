@@ -1,5 +1,6 @@
 import { HealthCheck } from '@/features/health'
 import { AuthWrapper } from './components/auth/AuthWrapper'
+import { SoccerDashboard } from '@/features/soccer'
 
 function App() {
   return (
@@ -13,6 +14,11 @@ function App() {
 
       <main className="container mx-auto px-6 py-8">
         <section className="mb-12">
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Live Soccer Scores</h2>
+          <SoccerDashboard />
+        </section>
+
+        <section className="mb-12">
           <h2 className="text-2xl font-semibold text-foreground mb-6">Authentication</h2>
           <AuthWrapper />
         </section>
@@ -20,29 +26,6 @@ function App() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold text-foreground mb-6">System Status</h2>
           <HealthCheck />
-        </section>
-
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold text-foreground mb-6">Getting Started</h2>
-          <div className="prose max-w-none">
-            <p className="text-muted-foreground mb-4">
-              This is a minimal implementation following Bulletproof React architecture with modern styling.
-            </p>
-            <ul className="space-y-2 text-foreground">
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                Frontend: React + Vite + TypeScript + Tailwind CSS + shadcn/ui
-              </li>
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                Backend: Node.js + Fastify + TypeScript + Better Auth
-              </li>
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                Architecture: Feature-based organization
-              </li>
-            </ul>
-          </div>
         </section>
       </main>
     </div>
