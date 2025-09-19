@@ -10,3 +10,5 @@ export interface HealthStatus {
   timestamp: string;
 }
 
+export * from './screenShare.js';
+
