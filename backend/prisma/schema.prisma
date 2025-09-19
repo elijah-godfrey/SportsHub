@@ -42,6 +42,10 @@ model User {
   hostedGames Game[]         @relation("HostedBy")
   metas       UserGameMeta[]
 
+  // Screen sharing fields
+  hostedScreenShares ScreenShareSession[] @relation("HostedScreenShares")
+  screenShareViews   ScreenShareViewer[]
+
   @@map("users")
 }
 
@@ -158,6 +162,7 @@ model Game {
   score GameScore?
 
   UserGameMeta UserGameMeta[]
+  screenShares ScreenShareSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -199,4 +204,52 @@ model UserGameMeta {
 
   @@unique([userId, gameId])
   @@map("user_game_meta")
+}
+
+enum ScreenShareStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model ScreenShareSession {
+  id             String            @id @default(uuid())
+  hostUserId     String
+  gameId         String? // Optional: link to a specific game
+  title          String
+  description    String?
+  status         ScreenShareStatus @default(ACTIVE)
+  isPublic       Boolean           @default(true)
+  maxViewers     Int?              @default(50)
+  currentViewers Int               @default(0)
+  totalViews     Int               @default(0)
+  startedAt      DateTime          @default(now())
+  endedAt        DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  host    User                @relation("HostedScreenShares", fields: [hostUserId], references: [id], onDelete: Cascade)
+  game    Game?               @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  viewers ScreenShareViewer[]
+
+  @@index([status, isPublic, startedAt])
+  @@index([hostUserId, status])
+  @@index([gameId, status])
+  @@map("screen_share_sessions")
+}
+
+model ScreenShareViewer {
+  id        String    @id @default(uuid())
+  sessionId String
+  userId    String? // null for anonymous viewers
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  isActive  Boolean   @default(true)
+
+  session ScreenShareSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, isActive])
+  @@map("screen_share_viewers")
 }
