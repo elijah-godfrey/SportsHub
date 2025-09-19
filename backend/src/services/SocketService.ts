@@ -1,5 +1,6 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { FastifyInstance } from 'fastify';
+import type { RTCSessionDescriptionInit, RTCIceCandidateInit } from '../types/screenShare.js';
 
 export interface GameUpdateEvent {
     type: 'game_update' | 'game_new' | 'score_update';
@@ -66,8 +67,13 @@ export class SocketService {
                 socket.leave(`live:game:${gameId}`);
             });
 
+            // Screen sharing events
+            this.setupScreenShareHandlers(socket);
+
             socket.on('disconnect', () => {
                 console.log(`Client disconnected: ${socket.id}`);
+                // Handle cleanup for screen sharing if user was in a session
+                this.handleScreenShareDisconnect(socket.id);
             });
         });
     }
@@ -97,6 +103,106 @@ export class SocketService {
      */
     getSubscriberCount(): number {
         return this.io?.engine.clientsCount || 0;
+    }
+
+    /**
+     * Setup screen sharing event handlers
+     */
+    private setupScreenShareHandlers(socket: any) {
+        // Join screen share session room
+        socket.on('screen-share:join', (data: { sessionId: string; userId?: string }) => {
+            const roomName = `screen-share:${data.sessionId}`;
+            socket.join(roomName);
+            console.log(`Client ${socket.id} joined screen share session ${data.sessionId}`);
+
+            // Store session info for cleanup
+            socket.screenShareSession = data.sessionId;
+            socket.screenShareUserId = data.userId;
+
+            // Notify others in the room about new viewer
+            socket.to(roomName).emit('screen-share:viewer-joined', {
+                sessionId: data.sessionId,
+                viewerId: socket.id,
+                userId: data.userId,
+            });
+        });
+
+        // Leave screen share session room
+        socket.on('screen-share:leave', (data: { sessionId: string }) => {
+            const roomName = `screen-share:${data.sessionId}`;
+            socket.leave(roomName);
+            console.log(`Client ${socket.id} left screen share session ${data.sessionId}`);
+
+            // Notify others in the room about viewer leaving
+            socket.to(roomName).emit('screen-share:viewer-left', {
+                sessionId: data.sessionId,
+                viewerId: socket.id,
+            });
+
+            // Clean up stored session info
+            delete socket.screenShareSession;
+            delete socket.screenShareUserId;
+        });
+
+        // WebRTC signaling events
+        socket.on('screen-share:offer', (data: {
+            sessionId: string;
+            viewerId: string;
+            offer: RTCSessionDescriptionInit;
+        }) => {
+            // Forward offer to specific viewer
+            socket.to(data.viewerId).emit('screen-share:offer', {
+                sessionId: data.sessionId,
+                hostId: socket.id,
+                offer: data.offer,
+            });
+        });
+
+        socket.on('screen-share:answer', (data: {
+            sessionId: string;
+            hostId: string;
+            answer: RTCSessionDescriptionInit;
+        }) => {
+            // Forward answer to host
+            socket.to(data.hostId).emit('screen-share:answer', {
+                sessionId: data.sessionId,
+                viewerId: socket.id,
+                answer: data.answer,
+            });
+        });
+
+        socket.on('screen-share:ice-candidate', (data: {
+            sessionId: string;
+            targetId: string;
+            candidate: RTCIceCandidateInit;
+        }) => {
+            // Forward ICE candidate to target peer
+            socket.to(data.targetId).emit('screen-share:ice-candidate', {
+                sessionId: data.sessionId,
+                senderId: socket.id,
+                candidate: data.candidate,
+            });
+        });
+    }
+
+    /**
+     * Handle cleanup when a user disconnects from screen sharing
+     */
+    private handleScreenShareDisconnect(socketId: string) {
+        // This will be called by the ScreenShareService to handle cleanup
+        // when a host or viewer disconnects
+        console.log(`Handling screen share disconnect for socket ${socketId}`);
+    }
+
+    /**
+     * Emit screen share session update to all viewers
+     */
+    emitSessionUpdate(sessionId: string, event: string, data: any) {
+        if (!this.io) return;
+
+        const roomName = `screen-share:${sessionId}`;
+        this.io.to(roomName).emit(event, data);
+        console.log(`Emitted ${event} to screen share session ${sessionId}`);
     }
 
     /**
