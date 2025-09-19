@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { healthRoutes } from './routes/health.js';
 import { gameRoutes } from './routes/games.js';
+import { screenShareRoutes } from './routes/screenShare.js';
 import authPlugin from './middleware/auth.js';
 import { socketService } from './services/SocketService.js';
 
@@ -31,6 +32,7 @@ export function buildApp(config: AppConfig = {}): FastifyInstance {
   // Routes
   app.register(healthRoutes, { prefix: '/api' });
   app.register(gameRoutes, { prefix: '/api' });
+  app.register(screenShareRoutes, { prefix: '/api' });
 
   // Initialize Socket.IO after server is ready
   app.addHook('onReady', async () => {
